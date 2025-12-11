@@ -1,0 +1,67 @@
+:root {
+  --gold: #f7b531;
+  --choco: #3c2415;
+  --bg1: #ffe8cf;
+  --bg2: #fff7ec;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 70%, #fff 100%);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--choco);
+  overflow: hidden;
+}
+
+.scene {
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(16px, 4vw, 40px);
+  padding: 64px clamp(18px, 4vw, 48px) 80px;
+  position: relative;
+}
+
+.title {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Chewy', cursive;
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  color: #f49b00;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+}
+
+@media (max-width: 720px) {
+  .scene {
+    padding-bottom: 48px;
+    gap: 18px;
+  }
+
+  .title {
+    top: 20px;
+  }
+
+  .choco {
+    width: clamp(120px, 26vw, 180px);
+  }
+
+  .jelly {
+    width: clamp(180px, 34vw, 260px);
+  }
+
+  .pumpkin {
+    width: clamp(140px, 28vw, 200px);
+  }
+}
