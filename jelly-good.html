@@ -45,6 +45,26 @@
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     a:hover { transform: translateY(-2px); box-shadow: 0 14px 26px rgba(0, 0, 0, 0.18); }
+    .sound-hint {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.8);
+      color: #2b2b2b;
+      font-weight: 800;
+      font-size: 0.95rem;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+      z-index: 2;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .sound-hint.off {
+      opacity: 0;
+      transform: translateX(-50%) translateY(10px);
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -53,5 +73,24 @@
     <a href="index.html">Return home</a>
     <a href="jelly.html">Pick again</a>
   </div>
+  <div class="sound-hint">Tap/click for sound</div>
+
+  <script>
+    const video = document.querySelector('.bg-video');
+    const hint = document.querySelector('.sound-hint');
+    const enableAudio = () => {
+      if (!video) return;
+      video.muted = false;
+      video.volume = 1;
+      video.play().catch(() => {});
+      hint?.classList.add('off');
+      window.removeEventListener('pointerdown', enableAudio);
+      window.removeEventListener('touchstart', enableAudio);
+      window.removeEventListener('click', enableAudio);
+    };
+    window.addEventListener('pointerdown', enableAudio);
+    window.addEventListener('touchstart', enableAudio);
+    window.addEventListener('click', enableAudio);
+  </script>
 </body>
 </html>

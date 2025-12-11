@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="grid.css">
 </head>
 <body>
+  <div class="bg-canvas" id="bg-canvas"></div>
   <div class="scene">
     <div class="title">Pick Your Treat</div>
     <div class="characters">
@@ -25,5 +26,259 @@
       </a>
     </div>
   </div>
+
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+    const container = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 2.5, 14);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(0xd6f7ff, 1);
+    container.appendChild(renderer.domElement);
+
+    scene.fog = new THREE.Fog(0xd6f7ff, 18, 70);
+
+    const hemi = new THREE.HemisphereLight(0xeef7ff, 0xfdf3ea, 1.1);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(-4, 8, 6);
+    dir.castShadow = false;
+    scene.add(dir);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+
+    const groundGeo = new THREE.CircleGeometry(80, 48);
+    const groundMat = new THREE.MeshPhongMaterial({
+      color: 0xd8fafc,
+      transparent: true,
+      opacity: 0.8,
+      shininess: 10
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -3.2;
+    scene.add(ground);
+
+    const waveGeo = new THREE.CircleGeometry(70, 32);
+    const waveMat = new THREE.MeshPhongMaterial({ color: 0xbdebf0, transparent: true, opacity: 0.35 });
+    const wave = new THREE.Mesh(waveGeo, waveMat);
+    wave.rotation.x = -Math.PI / 2;
+    wave.position.y = -3;
+    scene.add(wave);
+
+    const floaters = [];
+    const clock = new THREE.Clock();
+
+    const palette = {
+      cream: 0xfaf6f0,
+      pink: 0xf6a4c9,
+      blush: 0xf07fa4,
+      blue: 0x9ad6f0,
+      mint: 0xbef4e7,
+      coral: 0xffc2b3
+    };
+
+    function addSprinkles(target, count, radius, tube) {
+      const colors = [0xffffff, palette.pink, 0xff76ba, 0xfde2ff];
+      for (let i = 0; i < count; i++) {
+        const geom = new THREE.BoxGeometry(0.12, 0.04, 0.28);
+        const mat = new THREE.MeshStandardMaterial({
+          color: colors[Math.floor(Math.random() * colors.length)],
+          metalness: 0.2,
+          roughness: 0.35
+        });
+        const sprinkle = new THREE.Mesh(geom, mat);
+        const u = Math.random() * Math.PI * 2;
+        const v = (Math.random() - 0.5) * Math.PI;
+        const r = radius + (Math.random() - 0.5) * tube * 0.3;
+        sprinkle.position.set(
+          Math.cos(u) * r,
+          Math.sin(v) * tube * 0.6,
+          Math.sin(u) * r
+        );
+        sprinkle.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        target.add(sprinkle);
+      }
+    }
+
+    function createDonut(colorMain, colorIcing) {
+      const group = new THREE.Group();
+      const base = new THREE.Mesh(
+        new THREE.TorusGeometry(2, 0.62, 40, 160),
+        new THREE.MeshStandardMaterial({ color: colorMain, roughness: 0.4, metalness: 0.1 })
+      );
+      const icing = new THREE.Mesh(
+        new THREE.TorusGeometry(2, 0.7, 32, 120, Math.PI * 1.6),
+        new THREE.MeshStandardMaterial({ color: colorIcing, roughness: 0.25, metalness: 0.2 })
+      );
+      icing.rotation.x = 0.2;
+      icing.rotation.y = -0.8;
+      addSprinkles(icing, 40, 2.05, 0.8);
+
+      group.add(base);
+      group.add(icing);
+      return group;
+    }
+
+    function createLollipop(stemHeight, color) {
+      const group = new THREE.Group();
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(1.1, 42, 32),
+        new THREE.MeshPhysicalMaterial({
+          color,
+          roughness: 0.08,
+          metalness: 0.1,
+          reflectivity: 0.9,
+          clearcoat: 0.9,
+          clearcoatRoughness: 0.1
+        })
+      );
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.2, stemHeight, 32),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 })
+      );
+      stem.position.y = -stemHeight / 2 - 1;
+      group.add(sphere, stem);
+
+      addSprinkles(sphere, 24, 1.05, 0.35);
+      return group;
+    }
+
+    function createCone(size, color) {
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(size, size * 1.2, 24),
+        new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05 })
+      );
+      cone.position.y = -2.6;
+      return cone;
+    }
+
+    function addFloating(mesh, position, scale, spin = 0, bob = 0.3, tilt = true) {
+      mesh.position.copy(position);
+      mesh.scale.setScalar(scale);
+      if (tilt) {
+        mesh.rotation.x = Math.random() * Math.PI * 0.35;
+        mesh.rotation.y = Math.random() * Math.PI * 0.35;
+      } else {
+        mesh.rotation.set(0, 0, 0);
+      }
+      mesh.userData.baseY = position.y;
+      mesh.userData.spin = spin;
+      mesh.userData.bob = bob;
+      mesh.userData.phase = Math.random() * Math.PI * 2;
+      scene.add(mesh);
+      floaters.push(mesh);
+    }
+
+    addFloating(createDonut(palette.cream, palette.pink), new THREE.Vector3(-3.5, -1, 0), 1.35, 0, 0.5);
+    addFloating(createDonut(palette.cream, palette.coral), new THREE.Vector3(3, 0.2, -2), 1.1, 0, 0.35);
+    addFloating(createDonut(0xfdf1da, palette.blue), new THREE.Vector3(0.5, -0.6, -6), 0.95, 0, 0.3);
+
+    addFloating(createLollipop(3.6, palette.blue), new THREE.Vector3(-7, 1, -5), 1.2, 0, 0.25, false);
+    addFloating(createLollipop(4, palette.pink), new THREE.Vector3(7, 0.5, -4), 1.25, 0, 0.25, false);
+    addFloating(createLollipop(3.4, 0xffd9df), new THREE.Vector3(2.8, -0.4, -1), 0.9, 0, 0.18, false);
+
+    const coneColors = [0xb8e7ef, 0xd8f6ef, 0xcbe5ff];
+    for (let i = 0; i < 10; i++) {
+      const size = THREE.MathUtils.randFloat(0.6, 1.4);
+      const cone = createCone(size, coneColors[i % coneColors.length]);
+      cone.position.set(
+        THREE.MathUtils.randFloatSpread(30),
+        -2.6,
+        THREE.MathUtils.randFloat(-6, -16)
+      );
+      scene.add(cone);
+    }
+
+    function createCandyTower(height, radius, stripes) {
+      const group = new THREE.Group();
+      const colors = stripes;
+      const sliceHeight = height / colors.length;
+      colors.forEach((col, i) => {
+        const cyl = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius, radius, sliceHeight, 24, 1, true),
+          new THREE.MeshStandardMaterial({ color: col, roughness: 0.4, metalness: 0.1 })
+        );
+        cyl.position.y = -height / 2 + sliceHeight * i + sliceHeight / 2;
+        cyl.rotation.y = Math.random() * Math.PI * 2;
+        group.add(cyl);
+      });
+
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 0.9, 24, 16),
+        new THREE.MeshPhysicalMaterial({
+          color: colors[0],
+          roughness: 0.1,
+          metalness: 0.15,
+          clearcoat: 0.6,
+          clearcoatRoughness: 0.1
+        })
+      );
+      cap.position.y = height / 2;
+      group.add(cap);
+
+      return group;
+    }
+
+    const towerPalettes = [
+      [0xffc7de, 0xfff4e1, 0xf7a9c4],
+      [0x9ad6f0, 0xffffff, 0xbef4e7],
+      [0xffe1a8, 0xf6a4c9, 0xfcd8ff]
+    ];
+
+    for (let i = 0; i < 6; i++) {
+      const tower = createCandyTower(
+        THREE.MathUtils.randFloat(3.2, 5),
+        THREE.MathUtils.randFloat(0.6, 1),
+        towerPalettes[i % towerPalettes.length]
+      );
+      tower.position.set(
+        THREE.MathUtils.randFloatSpread(26),
+        -1.6,
+        THREE.MathUtils.randFloat(-8, -18)
+      );
+      tower.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(tower);
+    }
+
+    const hero = createLollipop(3.8, 0xf7c3d8);
+    hero.position.set(0, 0.4, 2);
+    hero.scale.setScalar(1.3);
+    floaters.push(hero);
+    scene.add(hero);
+
+    const parallax = { x: 0, y: 0 };
+    window.addEventListener('pointermove', (e) => {
+      parallax.x = (e.clientX / window.innerWidth - 0.5) * 0.4;
+      parallax.y = (e.clientY / window.innerHeight - 0.5) * 0.2;
+    });
+
+    function animate() {
+      const t = clock.getElapsedTime();
+      floaters.forEach((mesh) => {
+        if (mesh.userData.spin) mesh.rotation.y += mesh.userData.spin;
+        mesh.position.y = mesh.userData.baseY + Math.sin(t + mesh.userData.phase) * mesh.userData.bob;
+      });
+
+      camera.rotation.x += (parallax.y - camera.rotation.x) * 0.03;
+      camera.rotation.y += (parallax.x - camera.rotation.y) * 0.03;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      const { innerWidth, innerHeight } = window;
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
 </body>
 </html>
